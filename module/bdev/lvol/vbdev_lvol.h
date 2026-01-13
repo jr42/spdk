@@ -173,4 +173,23 @@ int vbdev_lvol_shallow_copy(struct spdk_lvol *lvol, const char *bdev_name,
 void vbdev_lvol_set_external_parent(struct spdk_lvol *lvol, const char *esnap_name,
 				    spdk_lvol_op_complete cb_fn, void *cb_arg);
 
+typedef void (*vbdev_lvs_timeout_cb)(struct spdk_lvol_store *lvs, void *cb_arg);
+
+struct lvs_timeout_cb_args {
+	struct spdk_lvol_store *lvs;
+	vbdev_lvs_timeout_cb cb_fn;
+	void *cb_arg;
+};
+
+/**
+ * \brief Sets IO timeout on bs_dev backing the lvstore.
+ *
+ * \param lvs Pointer to lvolstore
+ * \param timeout_in_sec Timeout value to be set
+ * \param lvbdev_lvs_timeout_cb timeout callback function
+ * \param cb_arg addition callback arguments
+ */
+int vbdev_lvs_set_timeout(struct spdk_lvol_store *lvs, uint64_t timeout_in_sec,
+			  vbdev_lvs_timeout_cb cb_fn, void *cb_arg);
+
 #endif /* SPDK_VBDEV_LVOL_H */

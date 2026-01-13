@@ -117,6 +117,42 @@ _vbdev_lvol_change_bdev_alias(struct spdk_lvol *lvol, const char *new_lvol_name)
 	return 0;
 }
 
+static void
+lvs_bs_dev_timeout_cb(void *cb_arg, struct spdk_bdev_io *bdev_io)
+{
+	struct lvs_timeout_cb_args *ctx = cb_arg;
+
+	if (ctx->cb_fn) {
+		ctx->cb_fn(ctx->lvs, ctx->cb_arg);
+	}
+
+	free(ctx);
+}
+
+int
+vbdev_lvs_set_timeout(struct spdk_lvol_store *lvs, uint64_t timeout_in_sec,
+		      vbdev_lvs_timeout_cb cb_fn, void *cb_arg)
+{
+	struct spdk_bs_dev *bs_dev = lvs->bs_dev;
+	struct lvs_timeout_cb_args *args;
+	int rc;
+
+	args = calloc(1, sizeof(*args));
+	if (!args) {
+		return -ENOMEM;
+	}
+
+	args->lvs = lvs;
+	args->cb_fn = cb_fn;
+	args->cb_arg = cb_arg;
+	rc = spdk_bs_bdev_set_timeout(bs_dev, timeout_in_sec, lvs_bs_dev_timeout_cb, args);
+	if (rc) {
+		free(args);
+		return rc;
+	}
+	return 0;
+}
+
 static struct lvol_store_bdev *
 vbdev_get_lvs_bdev_by_bdev(struct spdk_bdev *bdev_orig)
 {
