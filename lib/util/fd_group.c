@@ -677,6 +677,18 @@ spdk_fd_group_wait(struct spdk_fd_group *fgrp, int timeout)
 			}
 		}
 
+		/* Log DEFAULT-type handlers — these are not auto-drained and
+		 * can cause spinning if their fd is permanently readable.
+		 * EVENTFD-type handlers are auto-drained above and are fine. */
+		if (ehdlr->fd_type != SPDK_FD_TYPE_EVENTFD) {
+			static uint64_t log_count = 0;
+			if (log_count < 20 || (log_count % 100000) == 0) {
+				SPDK_NOTICELOG("fd_group_wait: DEFAULT handler '%s' fd=%d (#%"PRIu64")\n",
+					       ehdlr->name, ehdlr->fd, log_count);
+			}
+			log_count++;
+		}
+
 		/* call the interrupt response function */
 		owner = ehdlr->owner;
 		if (owner->wrapper_fn != NULL) {
