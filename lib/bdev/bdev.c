@@ -632,6 +632,7 @@ spdk_bdev_wait_for_examine(spdk_bdev_wait_for_examine_cb cb_fn, void *cb_arg)
 	ctx->cb_fn = cb_fn;
 	ctx->cb_arg = cb_arg;
 	ctx->poller = SPDK_POLLER_REGISTER(bdev_wait_for_examine_cb, ctx, 0);
+	spdk_poller_register_interrupt(ctx->poller, NULL, NULL);
 
 	return 0;
 }
