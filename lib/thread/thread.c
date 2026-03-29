@@ -1576,6 +1576,7 @@ poller_interrupt_fini(struct spdk_poller *poller)
 static int
 busy_poller_interrupt_init(struct spdk_poller *poller)
 {
+	struct spdk_event_handler_opts opts = {};
 	int busy_efd;
 
 	SPDK_DEBUGLOG(thread, "busy_efd init for busy poller %s\n", poller->name);
@@ -1585,7 +1586,16 @@ busy_poller_interrupt_init(struct spdk_poller *poller)
 		return -errno;
 	}
 
-	poller->intr = spdk_interrupt_register(busy_efd, poller->fn, poller->arg, poller->name);
+	/* Register as EVENTFD type so fd_group_wait() auto-drains the
+	 * counter before calling the callback.  Without this the eventfd
+	 * written by busy_poller_set_interrupt_mode(true) stays permanently
+	 * readable (level-triggered epoll), spinning the reactor.
+	 */
+	spdk_fd_group_get_default_event_handler_opts(&opts, sizeof(opts));
+	opts.fd_type = SPDK_FD_TYPE_EVENTFD;
+
+	poller->intr = spdk_interrupt_register_ext(busy_efd, poller->fn, poller->arg,
+						   poller->name, &opts);
 	if (poller->intr == NULL) {
 		close(busy_efd);
 		return -1;
